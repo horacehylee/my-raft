@@ -1,0 +1,11 @@
+{
+  "name": "my-raft",
+  "version": "1.0.0",
+  "author": "Horace Lee <horacehylee2@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "my-raft-core",
+    "my-raft-ui"
+  ]
+}
