@@ -1,6 +1,14 @@
-interface LogEntry {
+export interface LogEntry {
   data: string;
   term: number;
+}
+
+export interface Logger {
+  trace(message?: any, ...optionalParams: any[]): void;
+  debug(message?: any, ...optionalParams: any[]): void;
+  info(message?: any, ...optionalParams: any[]): void;
+  warn(message?: any, ...optionalParams: any[]): void;
+  error(message?: any, ...optionalParams: any[]): void;
 }
 
 export interface Config {
@@ -23,13 +31,18 @@ export interface Config {
    * A leader send heartbeat messages to maintain its leadership every heartbeatTick ticks have elasped.
    */
   heartbeatTick: number;
+
+  logger: Logger;
+
+  appendEntriesBatchSize?: number;
 }
 
 export interface NodeState {
+  id: number;
   /**
-   * status of the current node, initialized as "follower"
+   * role of the current node, initialized as "follower"
    */
-  status: "follower" | "candidate" | "leader";
+  role: "follower" | "candidate" | "leader";
 
   /**
    * latest term node has seen (initialized as 0)
@@ -40,6 +53,8 @@ export interface NodeState {
    * candidate id that received vote in current term (undefined if none)
    */
   votedFor?: number;
+
+  peers: number[];
 
   /**
    * log entries; each entry contains command for state machine, and term when entry was received by leader
@@ -68,7 +83,6 @@ export interface NodeState {
    */
   matchIndex: Record<number, number>;
 
-  isLeader: boolean;
   leaderId?: number;
   electionElasped: number;
   hearbeatElasped: number;
@@ -80,6 +94,16 @@ export interface NodeState {
    * reset when raft changes state to follower or candidate
    */
   randomizedElectionTimeout: number;
+
+  /**
+   * messages to be sent to other nodes
+   */
+  outgoingMessages: Message[];
+
+  /**
+   * vote granted by peers
+   */
+  voteGranted: Record<number, boolean>;
 }
 
 /**
@@ -97,6 +121,12 @@ export interface Node {
   tick(): void;
 
   /**
+   * receive message via transport and update internal state
+   * @param message message to be processed by the node
+   */
+  receive(message: Message): void;
+
+  /**
    * trigger transition to candidate state and start campaigning to become leader
    */
   campaign(): void;
@@ -105,25 +135,32 @@ export interface Node {
    * propose data to be appended to log
    * @param data
    */
-  propose(data: string): void;
-
-  /**
-   * stop the node
-   */
-  stop(): void;
+  propose(data: string): ProposeDataResponse;
 }
+
+export type Message =
+  | RequestVoteRequest
+  | RequestVoteResponse
+  | AppendEntriesRequest
+  | AppendEntriesResponse;
 
 /**
  * RequestVoteRequest is invoked by candidates to gather votes
  */
 export interface RequestVoteRequest {
+  type: "RequestVoteRequest";
+  from: number;
+  to: number;
+
   term: number;
-  candidateId: number;
   lastLogIndex: number;
   lastLogTerm: number;
 }
 
 export interface RequestVoteResponse {
+  type: "RequestVoteResponse";
+  from: number;
+  to: number;
   /**
    * currentTerm, for candidate to update itself
    */
@@ -135,6 +172,10 @@ export interface RequestVoteResponse {
  * AppendEntriesRequest is invoked by leader to replicate log entries, also used as heartbeat
  */
 export interface AppendEntriesRequest {
+  type: "AppendEntriesRequest";
+  from: number;
+  to: number;
+
   term: number;
   leaderId: number;
   prevLogIndex: number;
@@ -148,6 +189,9 @@ export interface AppendEntriesRequest {
 }
 
 export interface AppendEntriesResponse {
+  type: "AppendEntriesResponse";
+  from: number;
+  to: number;
   /**
    * currentTerm, for leader to update itself
    */
@@ -157,4 +201,11 @@ export interface AppendEntriesResponse {
    * true if follower container entry matching prevLogIndex and prevLogTerm
    */
   success: boolean;
+
+  matchIndex: number;
+}
+
+export interface ProposeDataResponse {
+  success: boolean;
+  leaderId?: number;
 }
