@@ -1,5 +1,13 @@
-import { Config, Message, Node, NodeState, ProposeDataResponse } from "./types";
+import {
+  Config,
+  LogEntry,
+  Message,
+  Node,
+  NodeState,
+  ProposeDataResponse,
+} from "./types";
 import clonedeep from "lodash.clonedeep";
+import { Subject } from "rxjs";
 
 export function createNode(config: Config): Node {
   let currentState: NodeState = {
@@ -23,6 +31,11 @@ export function createNode(config: Config): Node {
     outgoingMessages: [],
     voteGranted: initMap(config.peers, false),
   };
+  let observables = {
+    commited$: new Subject<LogEntry>(),
+    roleChanged$: new Subject<NodeState>(),
+    messageSent$: new Subject<Message>(),
+  };
   let tickFunction: () => void;
 
   becomeFollower(1);
@@ -31,8 +44,18 @@ export function createNode(config: Config): Node {
     return clonedeep(currentState);
   }
 
+  function getObservables() {
+    return Object.assign({}, observables);
+  }
+
   function tick(): void {
     tickFunction();
+  }
+
+  function stop(): void {
+    observables.commited$.complete();
+    observables.roleChanged$.complete();
+    observables.messageSent$.complete();
   }
 
   function tickElection(): void {
@@ -79,6 +102,7 @@ export function createNode(config: Config): Node {
 
   function send(message: Message): void {
     currentState.outgoingMessages.push(message);
+    observables.messageSent$.next(message);
   }
 
   function sendRequestVote(to: number): void {
@@ -280,7 +304,12 @@ export function createNode(config: Config): Node {
       currentState.role === "leader" &&
       logTerm(commited) === currentState.currentTerm
     ) {
-      currentState.commitIndex = commited;
+      if (currentState.commitIndex !== commited) {
+        for (let i = currentState.commitIndex + 1; i <= commited; i++) {
+          observables.commited$.next(currentState.log[i - 1]);
+        }
+        currentState.commitIndex = commited;
+      }
     }
   }
 
@@ -312,6 +341,7 @@ export function createNode(config: Config): Node {
     config.logger.info(
       `${config.id} becomes follower at term ${currentState.currentTerm}`
     );
+    observables.roleChanged$.next(getState());
   }
 
   function becomeCandidate() {
@@ -329,6 +359,7 @@ export function createNode(config: Config): Node {
     config.logger.info(
       `${config.id} becomes candidate at term ${currentState.currentTerm}`
     );
+    observables.roleChanged$.next(getState());
   }
 
   function becomeLeader() {
@@ -344,6 +375,7 @@ export function createNode(config: Config): Node {
     config.logger.info(
       `${config.id} becomes leader at term ${currentState.currentTerm}`
     );
+    observables.roleChanged$.next(getState());
   }
 
   function majorityCount() {
@@ -352,7 +384,9 @@ export function createNode(config: Config): Node {
 
   return {
     getState,
+    getObservables,
     tick,
+    stop,
     receive,
     campaign,
     propose,

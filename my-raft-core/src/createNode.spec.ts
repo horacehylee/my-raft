@@ -8,6 +8,7 @@ import {
   RequestVoteRequest,
   RequestVoteResponse,
 } from "./types";
+import { toArray } from "rxjs/operators";
 
 describe("create node", () => {
   test("node should be created as follower", () => {
@@ -17,7 +18,6 @@ describe("create node", () => {
     expect(state.role).toEqual("follower");
     expect(state.currentTerm).toEqual(1);
     expect(state.log).toEqual([]);
-    expect(state.outgoingMessages).toEqual([]);
 
     expect(state.nextIndex).toEqual({
       2: 1,
@@ -863,11 +863,22 @@ describe("log replication", () => {
     expect(state.nextIndex[2]).toEqual(2);
   });
 
-  test("leader node advance commit index if received majority of match index", () => {
+  test("leader node advance commit index if received majority of match index", (done) => {
     const node = createNode(getTestConfig(1, [1, 2, 3, 4, 5]));
     receiveVotesAndBecomeLeader(node);
     node.propose("data1");
     node.propose("data2");
+
+    node
+      .getObservables()
+      .commited$.pipe(toArray())
+      .subscribe((entries) => {
+        expect(entries).toEqual([
+          { data: "data1", term: 2 },
+          { data: "data2", term: 2 },
+        ] as LogEntry[]);
+        done();
+      });
 
     node.receive({
       type: "AppendEntriesResponse",
@@ -893,6 +904,15 @@ describe("log replication", () => {
       expect(state.commitIndex).toEqual(1);
     }
 
+    // first entry should be commited, so if subscribe from here should only receive second entry
+    node
+      .getObservables()
+      .commited$.pipe(toArray())
+      .subscribe((entries) => {
+        expect(entries).toEqual([{ data: "data2", term: 2 }] as LogEntry[]);
+        done();
+      });
+
     node.receive({
       type: "AppendEntriesResponse",
       from: 4,
@@ -908,6 +928,24 @@ describe("log replication", () => {
       expect(state.matchIndex[4]).toEqual(2);
       expect(state.commitIndex).toEqual(2);
     }
+
+    node.receive({
+      type: "AppendEntriesResponse",
+      from: 5,
+      to: 1,
+      matchIndex: 2,
+      success: true,
+      term: 2,
+    } as AppendEntriesResponse);
+    {
+      const state = node.getState();
+      expect(state.matchIndex[2]).toEqual(1);
+      expect(state.matchIndex[3]).toEqual(2);
+      expect(state.matchIndex[4]).toEqual(2);
+      expect(state.matchIndex[5]).toEqual(2);
+      expect(state.commitIndex).toEqual(2);
+    }
+    node.stop();
   });
 
   test("leader node decreases next index of peer if receives failure hearbeat response", () => {

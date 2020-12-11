@@ -1,3 +1,5 @@
+import { Observable, Subject } from "rxjs";
+
 export interface LogEntry {
   data: string;
   term: number;
@@ -116,9 +118,20 @@ export interface Node {
   getState(): NodeState;
 
   /**
+   * get observable for important events
+   */
+  getObservables(): {
+    commited$: Observable<LogEntry>;
+    roleChanged$: Observable<NodeState>;
+    messageSent$: Observable<Message>;
+  };
+
+  /**
    * increment internal logical clock. Election and heartbeat timeouts are measured in number of ticks
    */
   tick(): void;
+
+  stop(): void;
 
   /**
    * receive message via transport and update internal state
