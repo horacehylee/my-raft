@@ -5,6 +5,7 @@ import { MessageWrapper, RenderComponent, XY } from "../types";
 import { once } from "../utils";
 import Victor from "victor";
 import { arrow } from "./arrow";
+import { getMessageColor } from "../theme";
 
 const messageRadius = 10;
 const messageStroke = 3;
@@ -17,20 +18,14 @@ export const message = ({
   fromPos: XY;
   toPos: XY;
   messageWrapper: MessageWrapper;
-}): RenderComponent => {
+}): RenderComponent<State> => {
   const container = new Container();
   const circle = new Graphics();
   const outline = new Graphics();
   const positive = new Graphics();
   const negative = new Graphics();
   const color = getMessageColor(messageWrapper.message);
-  const arrowhead = arrow({
-    color: color,
-    forwardSize: 10,
-    sideSize: 7,
-    fromPos: fromPos,
-    toPos: toPos,
-  });
+  const arrowhead = arrow();
   container.interactive = true;
   container.cursor = "pointer";
   container.on("click", (event: InteractionEvent) => {
@@ -55,7 +50,13 @@ export const message = ({
     const dir = to.clone().subtract(from.clone()).normalize();
     const normal = new Victor(-dir.y, dir.x).normalize();
 
-    const head = arrowhead(state);
+    const head = arrowhead({
+      color: color,
+      forwardSize: 10,
+      sideSize: 7,
+      fromPos: fromPos,
+      toPos: toPos,
+    });
     const headPos = dir.clone().multiply(new Victor(12, 12));
     head.x = headPos.x;
     head.y = headPos.y;
@@ -92,17 +93,4 @@ export const message = ({
     setup(state);
     return container;
   };
-};
-
-const getMessageColor = (message: Message) => {
-  switch (message.type) {
-    case "RequestVoteRequest":
-    case "RequestVoteResponse":
-      return 0x66c2a5;
-    case "AppendEntriesRequest":
-    case "AppendEntriesResponse":
-      return 0xfc8d62;
-    default:
-      return 0x000;
-  }
 };

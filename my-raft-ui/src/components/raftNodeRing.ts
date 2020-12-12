@@ -1,7 +1,7 @@
-import { Container, Graphics } from "pixi.js";
+import { Container } from "pixi.js";
 import { State } from "../store";
-import { RenderComponent } from "../types";
-import { once } from "../utils";
+import { RenderComponent, XY } from "../types";
+import { aroundCircle, once } from "../utils";
 import { messageChannel } from "./messageChannel";
 import { RaftNode } from "./raftNode";
 
@@ -13,23 +13,24 @@ export const raftNodeRing = ({
   raftNodes: RaftNode[];
   startAngle: number;
   radius: number;
-}): RenderComponent => {
+}): RenderComponent<State> => {
   const container = new Container();
-  const messageChannels: RenderComponent[] = [];
-
-  const test = new Graphics();
+  const messageChannels: RenderComponent<State>[] = [];
 
   const setup = once((state: State) => {
-    let angle = startAngle;
-    const angleDiff = (2 * Math.PI) / raftNodes.length;
-    const nodePositions: Record<number, { x: number; y: number }> = {};
-    for (const raftNode of raftNodes) {
-      const displayObj = raftNode(state);
-      displayObj.x = radius * Math.cos(angle);
-      displayObj.y = radius * Math.sin(angle);
+    const points = aroundCircle({
+      radius: radius,
+      startAngle: startAngle,
+      parts: raftNodes.length,
+    });
+
+    const nodePositions: Record<number, XY> = {};
+    for (let i = 0; i < raftNodes.length; i++) {
+      const displayObj = raftNodes[i](state);
+      displayObj.x = points[i].x;
+      displayObj.y = points[i].y;
       container.addChild(displayObj);
-      angle += angleDiff;
-      nodePositions[raftNode.id] = { x: displayObj.x, y: displayObj.y };
+      nodePositions[raftNodes[i].id] = points[i];
     }
 
     const nodeIds = Object.keys(nodePositions).map((s) => Number.parseInt(s));

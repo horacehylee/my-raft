@@ -16,9 +16,9 @@ export const messageChannel = ({
   fromPos,
   to,
   toPos,
-}: MessageChannelParam): RenderComponent => {
+}: MessageChannelParam): RenderComponent<State> => {
   const container = new Container();
-  const messagesMap: Record<string, RenderComponent> = {};
+  const messagesMap: Record<string, RenderComponent<State>> = {};
   const channelKey = `${from}-${to}`;
 
   return (state: State) => {

@@ -8,20 +8,20 @@ export const position = ({
   x,
   y,
 }: {
-  child: RenderComponent;
+  child: RenderComponent<any>;
   x: number;
   y: number;
-}): RenderComponent => {
+}): RenderComponent<any> => {
   const container = new Container();
-  const setup = once((state: State) => {
-    container.addChild(child(state));
+  const setup = once((param: any) => {
+    container.addChild(child(param));
     container.x = x;
     container.y = y;
   });
 
-  return (state: State) => {
-    setup(state);
-    child(state);
+  return (param) => {
+    setup(param);
+    child(param);
     return container;
   };
 };

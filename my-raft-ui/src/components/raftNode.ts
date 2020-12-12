@@ -1,17 +1,17 @@
+import { NodeState } from "my-raft-core";
 import {
   Container,
   Graphics,
   Text,
-  InteractionManager,
   InteractionEvent,
+  DisplayObject,
 } from "pixi.js";
-import { app } from "../app";
 import { State } from "../store";
+import { electionRingColor, leaderRingColor, termColors } from "../theme";
 import { RenderComponent } from "../types";
+import { aroundCircle, once } from "../utils";
 
-const termColors = [0x66c2a5, 0xfc8d62, 0x8da0cb, 0xe78ac3, 0xa6d854, 0xffd92f];
-
-export type RaftNode = RenderComponent & { id: number };
+export type RaftNode = RenderComponent<State> & { id: number };
 
 export interface RaftNodeParam {
   id: number;
@@ -24,24 +24,24 @@ export const raftNode = ({ id }: RaftNodeParam): RaftNode => {
   const container = new Container();
   const electionProgress = circularProgress({
     startAngle: -Math.PI / 2,
-    color: 0xa4a4a4,
+    color: electionRingColor,
     thickness: ringThickness,
     radius: baseRadius + ringThickness / 2,
   });
-  const electionProgressContainer = electionProgress({ progress: 0 });
-  container.addChild(electionProgressContainer);
+  let electionProgressContainer: Container;
 
   const leaderRing = circularProgress({
     startAngle: 0,
-    color: 0x434343,
+    color: leaderRingColor,
     thickness: ringThickness,
     radius: baseRadius + ringThickness / 2,
   });
-  const leaderRingContainer = leaderRing({ progress: 1 });
-  container.addChild(leaderRingContainer);
+  let leaderRingContainer: Container;
 
-  const base = new Graphics();
-  container.addChild(base);
+  const votesGrantedRing = votesContainer();
+
+  const baseCircle = new Graphics();
+  container.addChild(baseCircle);
 
   const termText = new Text("");
   termText.anchor.x = 0.5;
@@ -55,33 +55,110 @@ export const raftNode = ({ id }: RaftNodeParam): RaftNode => {
     event.stopPropagation();
   });
 
+  const setup = once((nodeState: NodeState) => {
+    electionProgressContainer = electionProgress({ progress: 0 });
+    container.addChild(electionProgressContainer);
+
+    leaderRingContainer = leaderRing({ progress: 1 });
+    container.addChild(leaderRingContainer);
+
+    container.addChild(votesGrantedRing(nodeState));
+  });
+
   function render(state: State) {
     const nodeState = state.nodeStates[id];
-    if (nodeState.role !== "leader") {
-      electionProgressContainer.visible = true;
-      leaderRingContainer.visible = false;
+    setup(nodeState);
 
+    if (nodeState.role !== "leader") {
       const electionElasped = nodeState.electionElasped;
       const electionTimeout = nodeState.randomizedElectionTimeout;
       electionProgress({ progress: -electionElasped / electionTimeout });
+
+      electionProgressContainer.visible = true;
+      leaderRingContainer.visible = false;
     } else {
       electionProgressContainer.visible = false;
       leaderRingContainer.visible = true;
     }
 
     const baseColor = termColors[nodeState.currentTerm % termColors.length];
-    base.clear();
-    base.beginFill(baseColor);
-    base.drawCircle(0, 0, baseRadius);
-    base.endFill();
+    baseCircle.clear();
+    baseCircle.beginFill(baseColor);
+    baseCircle.drawCircle(0, 0, baseRadius);
+    baseCircle.endFill();
 
     termText.text = nodeState.currentTerm.toString();
     termText.x = 0;
     termText.y = 0;
+
+    votesGrantedRing(nodeState);
     return container;
   }
   render.id = id;
   return render;
+};
+
+const votesContainer = (): RenderComponent<NodeState> => {
+  const pointCircleRadius = 20;
+  const voteCircleRadius = 5;
+  const outlineStroke = 1;
+
+  const container = new Container();
+  const outlineCircles: Record<number, DisplayObject> = {};
+  const solidCircles: Record<number, DisplayObject> = {};
+
+  const setup = once((nodeState: NodeState) => {
+    const allNodeIds = nodeState.peers
+      .concat(nodeState.id)
+      .sort((a, b) => a - b);
+    const points = aroundCircle({
+      radius: pointCircleRadius,
+      startAngle: -Math.PI / 2,
+      parts: allNodeIds.length,
+    });
+    for (let i = 0; i < allNodeIds.length; i++) {
+      const nodeId = allNodeIds[i];
+      const point = points[i];
+
+      const outlineCircle = new Graphics();
+      outlineCircle
+        .clear()
+        .lineStyle(outlineStroke, leaderRingColor)
+        .drawCircle(point.x, point.y, voteCircleRadius - outlineStroke / 2);
+      outlineCircles[nodeId] = outlineCircle;
+      container.addChild(outlineCircle);
+
+      const solidCircle = new Graphics();
+      solidCircle
+        .clear()
+        .beginFill(leaderRingColor)
+        .drawCircle(point.x, point.y, voteCircleRadius)
+        .endFill();
+      solidCircles[nodeId] = solidCircle;
+      container.addChild(solidCircle);
+    }
+  });
+
+  const updateVote = (id: number, granted: boolean) => {
+    outlineCircles[id].visible = !granted;
+    solidCircles[id].visible = granted;
+  };
+
+  return (nodeState) => {
+    setup(nodeState);
+
+    if (nodeState.role !== "candidate") {
+      container.visible = false;
+      return container;
+    }
+    container.visible = true;
+    updateVote(nodeState.id, true);
+    for (const [key, granted] of Object.entries(nodeState.voteGranted)) {
+      const nodeId = Number.parseInt(key);
+      updateVote(nodeId, granted);
+    }
+    return container;
+  };
 };
 
 interface CircularProgressParam {

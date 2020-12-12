@@ -151,7 +151,9 @@ export function createNode(config: Config): Node {
   }
 
   function receive(message: Message): void {
-    config.logger.info(`${config.id} received ${message.type} message`);
+    config.logger.info(
+      `${config.id} received ${message.type} message from ${message.from}`
+    );
     switch (message.type) {
       case "RequestVoteRequest":
         if (currentState.currentTerm < message.term) {

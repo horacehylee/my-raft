@@ -1,4 +1,4 @@
-import { Message, NodeState } from "my-raft-core";
+import { NodeState } from "my-raft-core";
 import { MessageWrapper } from "./types";
 
 export interface State {

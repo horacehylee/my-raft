@@ -9,13 +9,13 @@ import { ticksPerS, tickRate } from "./constant";
 import { raftNodeRing } from "./components/raftNodeRing";
 import { position } from "./components/position";
 import { v4 as uuidv4 } from "uuid";
-import { arrow } from "./components/arrow";
+import { backgroundColor } from "./theme";
 
 export const app = new Application({
   width: 800,
   height: 600,
   antialias: true,
-  backgroundColor: 0xdde0e4,
+  backgroundColor: backgroundColor,
   resolution: 1,
 });
 
@@ -65,7 +65,7 @@ merge(...messageSentObservables).subscribe((message) => {
   messagesToBeSent.push(message);
 });
 
-const renderComponents: RenderComponent[] = [];
+const renderComponents: RenderComponent<State>[] = [];
 
 function setup() {
   renderComponents.push(
