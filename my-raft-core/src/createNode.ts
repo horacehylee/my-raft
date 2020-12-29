@@ -44,6 +44,10 @@ export function createNode(config: Config): Node {
     return clonedeep(currentState);
   }
 
+  function loadState(state: NodeState) {
+    currentState = clonedeep(state);
+  }
+
   function getObservables() {
     return Object.assign({}, observables);
   }
@@ -386,6 +390,7 @@ export function createNode(config: Config): Node {
 
   return {
     getState,
+    loadState,
     getObservables,
     tick,
     stop,

@@ -124,6 +124,17 @@ describe("create node", () => {
       expect(response.success).toBeFalsy();
     });
   });
+
+  test("node should load its state", () => {
+    const node = createNode(getTestConfig(1));
+
+    const state = node.getState();
+    node.campaign();
+
+    node.loadState(state);
+    expect(node.getState().role).toEqual("follower");
+    expect(node.getState().currentTerm).toEqual(1);
+  });
 });
 
 describe("campaign for leader election", () => {

@@ -118,6 +118,12 @@ export interface Node {
   getState(): NodeState;
 
   /**
+   * load state
+   * @param state
+   */
+  loadState(state: NodeState): void;
+
+  /**
    * get observable for important events
    */
   getObservables(): {
