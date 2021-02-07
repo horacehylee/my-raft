@@ -1,5 +1,4 @@
 import { Container } from "pixi.js";
-import { State } from "../store";
 import { RenderComponent } from "../types";
 import { once } from "../utils";
 

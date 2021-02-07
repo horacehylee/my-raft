@@ -1,5 +1,5 @@
 import { Container } from "pixi.js";
-import { State } from "../store";
+import { State } from "../simulator";
 import { RenderComponent, XY } from "../types";
 import { aroundCircle, once } from "../utils";
 import { messageChannel } from "./messageChannel";
@@ -24,12 +24,13 @@ export const raftNodeRing = ({
       parts: raftNodes.length,
     });
 
+    const nodes = [];
     const nodePositions: Record<number, XY> = {};
     for (let i = 0; i < raftNodes.length; i++) {
       const displayObj = raftNodes[i](state);
       displayObj.x = points[i].x;
       displayObj.y = points[i].y;
-      container.addChild(displayObj);
+      nodes.push(displayObj);
       nodePositions[raftNodes[i].id] = points[i];
     }
 
@@ -59,15 +60,19 @@ export const raftNodeRing = ({
     for (const channel of messageChannels) {
       container.addChild(channel(state));
     }
+
+    for (const node of nodes) {
+      container.addChild(node);
+    }
   });
 
   return (state) => {
     setup(state);
-    for (const raftNode of raftNodes) {
-      raftNode(state);
-    }
     for (const channel of messageChannels) {
       channel(state);
+    }
+    for (const raftNode of raftNodes) {
+      raftNode(state);
     }
     return container;
   };

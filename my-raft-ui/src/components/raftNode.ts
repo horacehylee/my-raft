@@ -6,10 +6,12 @@ import {
   InteractionEvent,
   DisplayObject,
 } from "pixi.js";
-import { State } from "../store";
 import { electionRingColor, leaderRingColor, termColors } from "../theme";
 import { RenderComponent } from "../types";
 import { aroundCircle, once } from "../utils";
+import { simulator } from "../app";
+import { circularProgress } from "./circularProgress";
+import { State } from "../simulator";
 
 export type RaftNode = RenderComponent<State> & { id: number };
 
@@ -43,16 +45,35 @@ export const raftNode = ({ id }: RaftNodeParam): RaftNode => {
   const baseCircle = new Graphics();
   container.addChild(baseCircle);
 
-  const termText = new Text("");
-  termText.anchor.x = 0.5;
-  termText.anchor.y = 0.5;
-  termText.resolution = 2;
-  container.addChild(termText);
+  const nodeIdText = new Text(`n${id}`, { fontSize: 16 });
+  nodeIdText.x = 0;
+  nodeIdText.y = 0;
+  nodeIdText.anchor.x = 0.5;
+  nodeIdText.anchor.y = 0.5;
+  nodeIdText.resolution = 2;
+  container.addChild(nodeIdText);
+
+  const detailsText = new Text("", { fontSize: 12 });
+  detailsText.x = 40;
+  detailsText.y = 0;
+  detailsText.anchor.y = 0.5;
+  detailsText.resolution = 2;
+  container.addChild(detailsText);
+
+  const controlContainer = new Container();
+  controlContainer.x = 40;
+  controlContainer.y = 20;
+
+  controlContainer.addChild(container);
 
   container.interactive = true;
   container.cursor = "pointer";
   container.on("click", (event: InteractionEvent) => {
     event.stopPropagation();
+    const node = simulator.getNode(id);
+    if (node.getState().role !== "leader") {
+      node.campaign();
+    }
   });
 
   const setup = once((nodeState: NodeState) => {
@@ -87,9 +108,11 @@ export const raftNode = ({ id }: RaftNodeParam): RaftNode => {
     baseCircle.drawCircle(0, 0, baseRadius);
     baseCircle.endFill();
 
-    termText.text = nodeState.currentTerm.toString();
-    termText.x = 0;
-    termText.y = 0;
+    let details = `term: ${nodeState.currentTerm.toString()}\n`;
+    if (nodeState.votedFor) {
+      details += `voted for: n${nodeState.votedFor}`;
+    }
+    detailsText.text = details;
 
     votesGrantedRing(nodeState);
     return container;
@@ -157,38 +180,6 @@ const votesContainer = (): RenderComponent<NodeState> => {
       const nodeId = Number.parseInt(key);
       updateVote(nodeId, granted);
     }
-    return container;
-  };
-};
-
-interface CircularProgressParam {
-  startAngle: number;
-  color: number;
-  thickness: number;
-  radius: number;
-}
-
-const circularProgress = ({
-  startAngle,
-  color,
-  thickness,
-  radius,
-}: CircularProgressParam) => {
-  const container = new Container();
-  const circleStroke = new Graphics();
-  container.addChild(circleStroke);
-
-  return ({ progress }: { progress: number }) => {
-    circleStroke.clear();
-    circleStroke.lineStyle(thickness, color);
-    circleStroke.arc(
-      0,
-      0,
-      radius,
-      startAngle,
-      startAngle + progress * Math.PI * 2
-    );
-    circleStroke.endFill();
     return container;
   };
 };

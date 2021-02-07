@@ -1,12 +1,4 @@
-import { DisplayObject } from "pixi.js";
 import { Message } from "my-raft-core";
-
-export type RenderComponent<T> = (param: T) => DisplayObject;
-
-export interface Renderer<T> {
-  setup: () => void;
-  draw: (param: T) => void;
-}
 
 export interface MessageWrapper {
   id: string;

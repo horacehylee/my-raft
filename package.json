@@ -6,6 +6,7 @@
   "private": true,
   "workspaces": [
     "my-raft-core",
-    "my-raft-ui"
+    "my-raft-ui",
+    "my-raft-p5"
   ]
 }

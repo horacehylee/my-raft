@@ -1,6 +1,8 @@
 import { Message } from "my-raft-core";
 
-export const backgroundColor = 0xdde0e4;
+export const fps = 60;
+
+export const backgroundColor = "#dde0e4";
 
 export const leaderRingColor = 0x434343;
 export const electionRingColor = 0xa4a4a4;

@@ -1,11 +1,10 @@
-import { Message } from "my-raft-core";
 import { Container, Graphics, InteractionEvent } from "pixi.js";
-import { State } from "../store";
 import { MessageWrapper, RenderComponent, XY } from "../types";
 import { once } from "../utils";
 import Victor from "victor";
 import { arrow } from "./arrow";
 import { getMessageColor } from "../theme";
+import { State } from "../simulator";
 
 const messageRadius = 10;
 const messageStroke = 3;

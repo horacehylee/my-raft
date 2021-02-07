@@ -1,5 +1,5 @@
-import { Container, DisplayObject } from "pixi.js";
-import { State } from "../store";
+import { Container, DisplayObject, Graphics } from "pixi.js";
+import { State } from "../simulator";
 import { RenderComponent } from "../types";
 import { XY } from "./../types";
 import { message } from "./message";
@@ -18,11 +18,19 @@ export const messageChannel = ({
   toPos,
 }: MessageChannelParam): RenderComponent<State> => {
   const container = new Container();
+  container.sortableChildren = true;
   const messagesMap: Record<string, RenderComponent<State>> = {};
   const channelKey = `${from}-${to}`;
 
+  const channelDisplay = new Graphics();
+  channelDisplay.lineStyle(2, 0xc0c0c2);
+  channelDisplay.x = fromPos.x;
+  channelDisplay.y = fromPos.y;
+  channelDisplay.lineTo(toPos.x - fromPos.x, toPos.y - fromPos.y);
+  container.addChild(channelDisplay);
+
   return (state: State) => {
-    const messageWrappers = state.messageChannels[channelKey];
+    const messageWrappers = state.messageChannels[channelKey].messages;
 
     // remove non-existed messages
     const removedMessageIds = Object.keys(messagesMap).filter(
@@ -46,7 +54,7 @@ export const messageChannel = ({
           messageWrapper: messageWrapper,
         });
         obj = messagesMap[messageWrapper.id](state);
-        container.addChild(obj);
+        container.addChildAt(obj, container.children.length);
       }
 
       const progress =

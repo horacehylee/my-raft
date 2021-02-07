@@ -23,7 +23,10 @@ export const aroundCircle = ({
   const angleDiff = (2 * Math.PI) / parts;
   const xys: XY[] = [];
   for (let i = 0; i < parts; i++) {
-    xys.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle) });
+    xys.push({
+      x: Math.round(radius * Math.cos(angle)),
+      y: Math.round(radius * Math.sin(angle)),
+    });
     angle += angleDiff;
   }
   return xys;
