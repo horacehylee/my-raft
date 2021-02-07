@@ -1,0 +1,1 @@
+{"version":3,"file":"raftNodeRing.d.ts","sourceRoot":"","sources":["../../src/components/raftNodeRing.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,KAAK,EAAE,MAAM,cAAc,CAAC;AACrC,OAAO,EAAE,eAAe,EAAM,MAAM,UAAU,CAAC;AAG/C,OAAO,EAAE,QAAQ,EAAE,MAAM,YAAY,CAAC;AAEtC,eAAO,MAAM,YAAY;eAKZ,QAAQ,EAAE;gBACT,MAAM;YACV,MAAM;MACZ,gBAAgB,KAAK,CA+DxB,CAAC"}
